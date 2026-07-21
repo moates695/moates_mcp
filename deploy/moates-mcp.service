@@ -1,0 +1,22 @@
+# systemd unit for running moates-mcp directly (no Docker).
+# Install to /etc/systemd/system/moates-mcp.service, then:
+#   sudo systemctl daemon-reload && sudo systemctl enable --now moates-mcp
+#
+# Assumes the repo is cloned to /opt/moates_mcp with a uv-managed venv.
+
+[Unit]
+Description=moates-mcp MCP server
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/opt/moates_mcp
+Environment=MCP_HOST=127.0.0.1
+Environment=MCP_PORT=8000
+ExecStart=/opt/moates_mcp/.venv/bin/python -m moates_mcp --http
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
