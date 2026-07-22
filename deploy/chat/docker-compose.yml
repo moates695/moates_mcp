@@ -1,0 +1,42 @@
+# Declarative deployment for the moates web chat proxy on the droplet.
+#
+# Mirrors the moates-mcp service: the container joins the shared reverse-proxy
+# network (backend-prod_api-network) so the nginx reverse proxy can route
+# chat.moates.com.au to moates-chat-prod:8000 by name. It publishes no host
+# port; nginx reaches it over the docker network.
+#
+# The OpenAI key is read from deploy/chat/.env on the droplet (NOT committed).
+# See deploy/chat/README.md.
+#
+# Do not run this by hand on the droplet. Deploy from a clone of this repo with:
+#
+#     deploy/deploy_chat.sh
+
+name: moates-chat
+
+services:
+  moates-chat:
+    build:
+      context: ../..
+      dockerfile: Dockerfile.chat
+    image: moates-chat:latest
+    container_name: moates-chat-prod
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # Non-secret config with sensible defaults; override in .env if desired.
+      CHAT_MODEL: "${CHAT_MODEL:-gpt-5-nano}"
+      CHAT_ALLOWED_ORIGINS: "${CHAT_ALLOWED_ORIGINS:-https://moates.com.au,https://www.moates.com.au}"
+    expose:
+      - "8000"
+    networks:
+      - api-network
+
+networks:
+  # Created by the gym_junkie_server compose project; shared with the nginx
+  # reverse proxy and the other prod services. External so this project never
+  # tries to create or remove it.
+  api-network:
+    external: true
+    name: backend-prod_api-network
