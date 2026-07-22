@@ -1,0 +1,39 @@
+# Declarative deployment for the moates-mcp MCP server on the droplet.
+#
+# The container joins the shared reverse-proxy network (backend-prod_api-network)
+# so the nginx-proxy-prod container can route mcp.moates.com.au to
+# moates-mcp-prod:8000 by name. It publishes no host port; nginx reaches it over
+# the docker network.
+#
+# Do not run this by hand on the droplet. Deploy from a clone of this repo with:
+#
+#     deploy/deploy.sh
+#
+# which ships the committed code to the droplet, then runs
+# `docker compose up -d --build` here.
+
+name: moates-mcp
+
+services:
+  moates-mcp:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: moates-mcp:latest
+    container_name: moates-mcp-prod
+    restart: unless-stopped
+    environment:
+      MCP_HOST: "0.0.0.0"
+      MCP_PORT: "8000"
+    expose:
+      - "8000"
+    networks:
+      - api-network
+
+networks:
+  # Created by the gym_junkie_server compose project; shared with the nginx
+  # reverse proxy and the other prod services. External so this project never
+  # tries to create or remove it.
+  api-network:
+    external: true
+    name: backend-prod_api-network

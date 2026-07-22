@@ -1,3 +1,8 @@
+# NOTE: This unit is NOT what production uses. The droplet runs moates-mcp as a
+# Docker container (see docker-compose.yml + deploy.sh). This file is kept only
+# as a reference for a bare-metal / no-Docker alternative. To deploy, use:
+#   deploy/deploy.sh
+#
 # systemd unit for running moates-mcp directly (no Docker).
 # Install to /etc/systemd/system/moates-mcp.service, then:
 #   sudo systemctl daemon-reload && sudo systemctl enable --now moates-mcp
