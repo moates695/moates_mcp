@@ -2,7 +2,9 @@
 
 from moates_mcp import data
 from moates_mcp.server import (
+    get_education,
     get_experience,
+    get_interests,
     get_profile,
     get_project,
     get_resume,
@@ -58,8 +60,39 @@ def test_search_empty_query():
     assert search("   ") == []
 
 
+def test_get_education_includes_unsw():
+    education = get_education()
+    assert any("UNSW" in ed["institution"] for ed in education)
+    assert all({"qualification", "institution", "dates", "result"} <= ed.keys() for ed in education)
+
+
+def test_get_interests_has_summary_and_list():
+    interests = get_interests()
+    assert interests["summary"]
+    assert isinstance(interests["interests"], list) and interests["interests"]
+
+
+def test_get_project_has_rich_detail():
+    gj = get_project("gym_junkie")
+    assert gj["sections"], "expected detailed sections for Gym Junkie"
+    assert any("heatmap" in s["title"].lower() for s in gj["sections"])
+    assert "tagline" in gj
+
+
+def test_search_finds_project_section_detail():
+    hits = search("heatmap")
+    assert any(h["source"] == "project:gym_junkie" for h in hits)
+
+
+def test_search_finds_education():
+    hits = search("honours")
+    assert any(h["source"].startswith("education") for h in hits)
+
+
 def test_resume_contains_key_sections():
     resume = get_resume()
     assert "# Marcus Oates" in resume
     assert "## Experience" in resume
+    assert "## Education" in resume
     assert "## Projects" in resume
+    assert "Muscle heatmap" in resume

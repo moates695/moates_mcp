@@ -23,9 +23,12 @@ PORT = int(os.environ.get("MCP_PORT", "8000"))
 INSTRUCTIONS = (
     "This server answers questions about Marcus Oates, a Sydney-based senior software "
     "engineer specialising in voice AI and backend systems. Use get_profile for an "
-    "overview, list_projects/get_project for his work, get_experience for his career "
-    "history, get_skills for his tech stack, and get_resume for everything in one "
-    "document. Only answer from the data these tools return; do not invent details."
+    "overview, list_projects/get_project for his work (get_project returns rich "
+    "per-project detail: features, architecture and how each project works), "
+    "get_experience for his career history, get_education for his qualifications, "
+    "get_skills for his tech stack, get_interests for hobbies, and get_resume for "
+    "everything in one document. search does a keyword lookup across all of it. Only "
+    "answer from the data these tools return; do not invent details."
 )
 
 # stateless_http keeps each request self-contained, which is the right fit for a
@@ -88,6 +91,12 @@ def get_experience() -> list[dict]:
 
 
 @mcp.tool()
+def get_education() -> list[dict]:
+    """Get Marcus's education: degrees, institutions, dates, results and highlights."""
+    return data.EDUCATION
+
+
+@mcp.tool()
 def get_skills() -> list[dict]:
     """Get Marcus's technical skills and tools, grouped by category."""
     return data.SKILLS
@@ -124,8 +133,22 @@ def search(query: str) -> list[dict]:
                 "text": f"{exp['role']} at {exp['company']} ({exp['dates']}): {exp['summary']}",
             })
 
+    for ed in data.EDUCATION:
+        haystack = " ".join([ed["qualification"], ed["institution"], ed["result"], *ed["highlights"]]).lower()
+        if q in haystack:
+            hits.append({
+                "source": f"education:{ed['institution']}",
+                "text": f"{ed['qualification']}, {ed['institution']} ({ed['dates']}): {ed['result']}",
+            })
+
     for proj in data.PROJECTS:
-        haystack = " ".join([proj["name"], proj["blurb"], proj["description"], *proj["tech"]]).lower()
+        section_text = " ".join(
+            " ".join([s.get("title", ""), s.get("summary", ""), *s.get("points", [])])
+            for s in proj.get("sections", [])
+        )
+        haystack = " ".join(
+            [proj["name"], proj["blurb"], proj["description"], proj.get("tagline", ""), section_text, *proj["tech"]]
+        ).lower()
         if q in haystack:
             hits.append({
                 "source": f"project:{proj['key']}",
@@ -153,8 +176,9 @@ def ask_about_marcus(question: str) -> str:
     """Starter prompt for asking a question about Marcus, grounded in this server's tools."""
     return (
         "You are answering questions about Marcus Oates using the tools provided by this "
-        "MCP server. Call the relevant tools (get_profile, get_experience, list_projects, "
-        "get_project, get_skills, get_resume, search) and answer only from what they return. "
+        "MCP server. Call the relevant tools (get_profile, get_experience, get_education, "
+        "list_projects, get_project, get_skills, get_interests, get_resume, search) and "
+        "answer only from what they return. "
         f"If something is not covered, say so.\n\nQuestion: {question}"
     )
 
