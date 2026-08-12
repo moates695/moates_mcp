@@ -5,7 +5,9 @@ description = "An MCP server that answers questions about Marcus Oates (projects
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "mcp[cli]>=1.2.0",
+    # Capped below 2.0: that release moved FastMCP out of mcp.server.fastmcp, so
+    # an unpinned rebuild resolves to an SDK this server cannot import.
+    "mcp[cli]>=1.2.0,<2.0.0",
     "uvicorn>=0.30.0",
 ]
 
