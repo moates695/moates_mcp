@@ -64,6 +64,11 @@ It runs as a Docker container (`moates-chat-prod`) on the shared
            set $chat_upstream http://moates-chat-prod:8000;
            proxy_pass $chat_upstream;
 
+           # Every request past here costs money. The zone and the $client_key
+           # map (which reads CF-Connecting-IP, since Cloudflare fronts this)
+           # are declared once at the top of the template.
+           limit_req zone=chat_zone burst=5 nodelay;
+
            proxy_http_version 1.1;
            proxy_set_header Host $host;
            proxy_set_header X-Real-IP $remote_addr;
@@ -141,4 +146,12 @@ curl -s -X POST localhost:8000/chat \
 | `CHAT_PER_IP_PER_MINUTE` | `8` | Per-IP burst limit |
 | `CHAT_PER_IP_PER_DAY` | `80` | Per-IP daily limit |
 | `CHAT_GLOBAL_PER_DAY` | `1500` | Global daily backstop |
+| `CHAT_PER_IP_TOKENS_PER_DAY` | `150000` | Per-IP daily token budget (~20 questions) |
+| `CHAT_GLOBAL_TOKENS_PER_DAY` | `3000000` | Global daily token budget |
+| `CHAT_ASSUMED_TOKENS_PER_CALL` | `9000` | Charged when the provider reports no usage |
 | `CHAT_ALLOWED_ORIGINS` | site apex + www | CORS allow-list |
+
+Request counts and token budgets are both enforced; whichever runs out first
+stops the conversation. Counts guard against hammering, tokens against spend:
+the whole knowledge base rides along as the system prompt, so every question
+costs roughly the same ~8k input tokens whatever its length.
