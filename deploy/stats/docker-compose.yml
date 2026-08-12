@@ -1,0 +1,52 @@
+# Declarative deployment for the moates site analytics collector.
+#
+# Mirrors moates-chat: the container joins the shared reverse-proxy network
+# (backend-prod_api-network) so nginx can route stats.moates.com.au to
+# moates-stats-prod:8000 by name. It publishes no host port.
+#
+# Unlike the other services, this one talks to Postgres running on the *host*
+# (the droplet's system postgres, shared with the dating and event-picker apps).
+# Containers cannot reach the host over the bridge network by default, hence
+# the host-gateway alias below. See deploy/stats/README.md for the matching
+# pg_hba.conf and listen_addresses changes.
+#
+# STATS_DATABASE_URL and STATS_IP_SALT come from deploy/stats/.env on the
+# droplet (NOT committed).
+#
+# Do not run this by hand on the droplet. Deploy from a clone of this repo with:
+#
+#     deploy/deploy_stats.sh
+
+name: moates-stats
+
+services:
+  moates-stats:
+    build:
+      context: ../..
+      dockerfile: Dockerfile.stats
+    image: moates-stats:latest
+    container_name: moates-stats-prod
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      STATS_ALLOWED_ORIGINS: "${STATS_ALLOWED_ORIGINS:-https://moates.com.au,https://www.moates.com.au}"
+    extra_hosts:
+      # Resolves to the docker bridge gateway, which is how this container
+      # reaches Postgres listening on the droplet host.
+      - "host.docker.internal:host-gateway"
+    expose:
+      - "8000"
+    # A collector must never be the reason the box runs out of memory. It idles
+    # around 60-80 MiB; this is a hard ceiling, not a target.
+    mem_limit: 192m
+    networks:
+      - api-network
+
+networks:
+  # Created by the gym_junkie_server compose project; shared with the nginx
+  # reverse proxy and the other prod services. External so this project never
+  # tries to create or remove it.
+  api-network:
+    external: true
+    name: backend-prod_api-network

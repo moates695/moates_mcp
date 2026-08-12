@@ -21,6 +21,13 @@ chat = [
     "fastapi>=0.110.0",
     "openai>=1.40.0",
 ]
+# Site analytics collector (moates_stats). Same reasoning as the chat extra: the
+# MCP image should not carry a database driver it never uses. psycopg's binary
+# wheel avoids needing libpq build tooling in the slim image.
+stats = [
+    "fastapi>=0.110.0",
+    "psycopg[binary,pool]>=3.1",
+]
 dev = [
     "pytest>=8.0.0",
     "httpx>=0.27.0",
@@ -31,7 +38,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/moates_mcp", "src/moates_chat"]
+packages = ["src/moates_mcp", "src/moates_chat", "src/moates_stats"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
